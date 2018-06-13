@@ -2,7 +2,7 @@
 
 If you are reading this, chances are that you have being assigned with the task of evaluating some of my skills as a software engineer. Your company gave me a technical challenge to solve and you are having a look to my approach.
 
-Well, this time I have something different for you (I hope) :D
+Well, this time I have something different for you (I hope) :grin:
 
 I want to present you guys with what I think is a more complete approach to my skills and way of thinking when it comes to software development. An open window to what I could do in your company should you hire me.
 
