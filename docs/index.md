@@ -14,3 +14,23 @@ During this journey the Crawl-O-Matic will evolve based on new requirements, som
 I hope that by using this format I can better show you how I think.
 
 Shall we start? 
+
+# The prototype
+
+__13th June 2018, 9:30 AM, Pinzo's HQ__
+
+Rodrigo scans Slack for new messages before his team has their daily standup. He works as a solutions engineer for Pinzo, a startup with an innovative sales solution based on quantic unicorns made of graphene that live in a blockchain.
+
+> _Sally: Hey Rod, hope everything is fine. Remember that idea we commented the other day? I think it has potential. I'd like to enable a prototype for some key customers so they can use it and give us some feedback._
+
+> _Rodrigo: Good morning Sally :) That's exciting news! Let's have a chat after standup. I'd like to better understand your needs. Sounds good?_
+
+> _Sally: Awesome! See you in a bit! :D_
+
+__11:30 AM__
+
+The meeting with Sally went well. After all face to face is the most effective form of communication!
+
+Rodrigo and Sally talked about how the company wants to know more about their customers to be able to offer them targeted solutions.
+
+The product team has the hipothesis that the page that users' define in their profile may contain valuable information about who their
