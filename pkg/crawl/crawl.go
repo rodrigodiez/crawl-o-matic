@@ -144,7 +144,7 @@ tokens:
 
 func (c *crawler) register(link *url.URL) {
 
-	if link.Hostname() != c.seed.Hostname() {
+	if link.Host != c.seed.Host {
 		return
 	}
 
