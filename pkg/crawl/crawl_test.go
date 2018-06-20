@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"testing"
+	"time"
 
 	"github.com/rodrigodiez/crawl-o-matic/pkg/crawl"
 )
@@ -18,26 +19,30 @@ type pageMock struct {
 
 func TestCrawlError(t *testing.T) {
 	tt := []struct {
-		name   string
-		rawurl string
+		name          string
+		rawurl        string
+		ticker        *time.Ticker
+		maxConcurrent uint16
 	}{
-		{name: "URL is empty", rawurl: ""},
-		{name: "URL is non absolute", rawurl: "/foo"},
-		{name: "URL is not http/s: mail", rawurl: "mailto:rodrigo@rodrigodiez.io"},
-		{name: "URL is not http/s: ftp", rawurl: "ftp://host/file.txt"},
-		{name: "URL is not an URL", rawurl: "this-is-just-test"},
+		{name: "URL is empty", rawurl: "", ticker: time.NewTicker(1 * time.Microsecond), maxConcurrent: 10},
+		{name: "URL is non absolute", rawurl: "/foo", ticker: time.NewTicker(1 * time.Microsecond), maxConcurrent: 10},
+		{name: "URL is not http/s: mail", rawurl: "mailto:rodrigo@rodrigodiez.io", ticker: time.NewTicker(1 * time.Microsecond), maxConcurrent: 10},
+		{name: "URL is not http/s: ftp", rawurl: "ftp://host/file.txt", ticker: time.NewTicker(1 * time.Microsecond), maxConcurrent: 10},
+		{name: "URL is not an URL", rawurl: "seriously@malformed://url", ticker: time.NewTicker(1 * time.Microsecond), maxConcurrent: 10},
+		{name: "Ticker is nil", rawurl: "https://www.monzo.com", ticker: nil, maxConcurrent: 10},
+		{name: "maxConcurrent is 0", rawurl: "https://www.monzo.com", ticker: time.NewTicker(1 * time.Microsecond), maxConcurrent: 0},
 	}
 
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			ch, err := crawl.Crawl(tc.rawurl)
+			ch, err := crawl.Crawl(tc.rawurl, tc.ticker, tc.maxConcurrent)
 
 			if ch != nil {
-				t.Error("channel was expected to be nil")
+				t.Error("channel should be nil")
 			}
 
 			if err == nil {
-				t.Error("error was not expected to be nil")
+				t.Error("error should not be nil")
 			}
 		})
 	}
@@ -63,10 +68,10 @@ func TestCrawl(t *testing.T) {
 		w.Write([]byte(mock.resp))
 	}))
 
-	ch, err := crawl.Crawl(hs.URL + "/foo")
+	ch, err := crawl.Crawl(hs.URL+"/foo", time.NewTicker(1*time.Microsecond), 10)
 
 	if err != nil {
-		t.Error("Error was expected to be nil")
+		t.Error("Error should be nil")
 	}
 
 	pages := []*crawl.Page{}
@@ -111,10 +116,10 @@ func TestCrawlVisitsPagesOnlyOnce(t *testing.T) {
 		w.Write([]byte("<a href='/foo'>A self link</a><a href='/foo'>Another self link</a>"))
 	}))
 
-	ch, err := crawl.Crawl(hs.URL + "/foo")
+	ch, err := crawl.Crawl(hs.URL+"/foo", time.NewTicker(1*time.Microsecond), 10)
 
 	if err != nil {
-		t.Error("Error was expected to be nil")
+		t.Error("Error should be nil")
 	}
 
 	for range ch {
@@ -139,17 +144,57 @@ func TestCrawlDoesNotFollowExternalLinks(t *testing.T) {
 		w.Write([]byte(fmt.Sprintf("<a href='%s/foo'>An external link</a>", hsExternal.URL)))
 	}))
 
-	ch, err := crawl.Crawl(hs.URL)
+	ch, err := crawl.Crawl(hs.URL, time.NewTicker(1*time.Microsecond), 10)
 
 	if err != nil {
-		t.Error("Error was expected to be nil")
+		t.Error("Error should be nil")
 	}
 
 	for range ch {
 	}
 
 	if callCount != 0 {
-		t.Error("External links were not expected to be followed")
+		t.Error("External links should not be followed")
+	}
+}
+
+func TestCrawlIgnoresMalformedLinks(t *testing.T) {
+	hs := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte("<a href='seriously@malformed://url'>An external link</a>"))
+	}))
+
+	ch, err := crawl.Crawl(hs.URL, time.NewTicker(1*time.Microsecond), 10)
+
+	if err != nil {
+		t.Error("Error should be nil")
+	}
+
+	page := <-ch
+
+	if len(page.Links) != 0 {
+		t.Error("Malformed links should have been ignored")
+	}
+}
+
+func TestCrawlIgnoresHttpErrorPages(t *testing.T) {
+	hs := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, "/", http.StatusPermanentRedirect)
+	}))
+
+	ch, err := crawl.Crawl(hs.URL, time.NewTicker(1*time.Microsecond), 10)
+
+	if err != nil {
+		t.Error("Error should be nil")
+	}
+
+	pages := []*crawl.Page{}
+
+	for page := range ch {
+		pages = append(pages, page)
+	}
+
+	if len(pages) != 0 {
+		t.Errorf("Http errors should be ignored but %d error pages were returned\n", len(pages))
 	}
 }
 

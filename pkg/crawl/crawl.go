@@ -1,16 +1,19 @@
 package crawl
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"net/url"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"golang.org/x/net/html"
 )
 
+// Page represents a web page. It contains its URL and a list of URLs that page links to
 type Page struct {
 	URL   *url.URL
 	Links []*url.URL
@@ -23,9 +26,27 @@ type crawler struct {
 	registry      map[string]struct{}
 	registryMutex *sync.Mutex
 	pages         chan *Page
+	ticker        *time.Ticker
 }
 
-func Crawl(rawurl string) (<-chan *Page, error) {
+// Crawl visits the given URL and follows its links within the same domain.
+// The following rules apply
+// - It will only follow links within the same domain of the initial URL
+// - It will only follow http/https links
+// - It will only visit the same link once, even if found in multiple pages
+// - It will add all valid links to the list, regardless if the link is within the same domain or not
+// - A page will not be added if visiting it resulted in a http.Get error (too many redirects, protocol error)
+// - It will crawl at the pace that the ticker sets to avoid generating problems to crawled sites or being banned by them
+// - It will use concurrency to crawl, but maxConcurrent will be respected
+func Crawl(rawurl string, ticker *time.Ticker, maxConcurrent uint16) (<-chan *Page, error) {
+
+	if maxConcurrent == 0 {
+		return nil, errors.New("maxConcurrent must be greater than 0")
+	}
+
+	if ticker == nil {
+		return nil, errors.New("ticker must not be nil")
+	}
 
 	seedURL, err := url.Parse(rawurl)
 
@@ -43,10 +64,11 @@ func Crawl(rawurl string) (<-chan *Page, error) {
 
 	crawler := &crawler{
 		seed:          seedURL,
-		queue:         make(chan *url.URL, 20),
+		queue:         make(chan *url.URL, maxConcurrent),
 		registry:      make(map[string]struct{}),
 		registryMutex: &sync.Mutex{},
 		pages:         make(chan *Page),
+		ticker:        ticker,
 	}
 
 	crawler.start()
@@ -59,7 +81,7 @@ func (c *crawler) start() {
 	c.register(c.seed)
 
 	go func() {
-		for {
+		for range c.ticker.C {
 			select {
 			case URL := <-c.queue:
 				atomic.AddInt64(&c.inProgress, 1)
