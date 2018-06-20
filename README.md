@@ -7,9 +7,11 @@ Hi Monzo!
 
 This is my version of a concurrency based HTTP/HTML crawler.
 
-I added some features that were not included in the original requirements. There is a funny story behind this! I was banned from 2 of the biggest sites in spain: http://www.meneame.net and https://www.forocoches.com while testing my crawler.
+I added some features that were not included in the original requirements. There is a funny story behind this!
 
-It was awesome to see how the crawler was only limited by the available network bandwidth but from the user point of view a crawler that gets banned is useless, and I am a very much user centric developer so I added:
+While testing the crawler I was banned from 2 of the biggest sites in spain: http://www.meneame.net and https://www.forocoches.com.
+
+It was awesome to see how the crawler was only limited by the available network bandwidth! However, from the user point of view, a crawler that gets banned is useless, and I am quite a user centric, value focused developer so I added:
 
 - Rate limiting
 - Max concurrent connections
