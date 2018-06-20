@@ -137,7 +137,6 @@ func TestCrawlDoesNotFollowExternalLinks(t *testing.T) {
 		callCount++
 
 		http.Error(w, "Not found", http.StatusNotFound)
-		return
 	}))
 
 	hs := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
